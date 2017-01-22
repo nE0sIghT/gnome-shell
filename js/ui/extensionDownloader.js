@@ -297,6 +297,7 @@ const InstallExtensionDialog = new Lang.Class({
                 }
             }
 
+            log('Versions ary: ' + versions);
             return versions;
         }
 
@@ -335,6 +336,7 @@ const InstallExtensionDialog = new Lang.Class({
 
         // Use current Shell version if disable-extension-version-validation
         // is disabled or info array is broken
+        log('Info: ' + this._info);
         if (!global.settings.get_boolean(ExtensionSystem.EXTENSION_DISABLE_VERSION_CHECK_KEY) ||
             !this._info || !this._info.shell_version_map) {
             this._shell_version = Config.PACKAGE_VERSION;
@@ -343,6 +345,7 @@ const InstallExtensionDialog = new Lang.Class({
 
         let shellVersions = getShellVersions();
         for (let version of shellVersions) {
+            log('Checking version ' + version);
             if(this._info.shell_version_map.hasOwnProperty(version)) {
                 // extensions.gnome.org will strip version if necessary
                 this._shell_version = Config.PACKAGE_VERSION;
@@ -360,6 +363,7 @@ const InstallExtensionDialog = new Lang.Class({
         } else {
             this._shell_version = supported_shell_versions[supported_shell_versions.length - 1];
         }
+        log('Determined %s Shell version'.format(this._shell_version));
     },
 });
 
