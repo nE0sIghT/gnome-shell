@@ -247,6 +247,8 @@ function getEnabledExtensions() {
 
 function onEnabledExtensionsChanged() {
     let newEnabledExtensions = getEnabledExtensions();
+    log('Enabled extensions: %s'.format(new Set(newEnabledExtensions)));
+    log('New enabled extensions: %s'.format(new Set(enabledExtensions)));
 
     if (!enabled)
         return;
@@ -256,6 +258,7 @@ function onEnabledExtensionsChanged() {
     newEnabledExtensions.filter(function(uuid) {
         return enabledExtensions.indexOf(uuid) == -1;
     }).forEach(function(uuid) {
+        log('Enabling: %s'.format(uuid));
         enableExtension(uuid);
     });
 
@@ -264,6 +267,7 @@ function onEnabledExtensionsChanged() {
     enabledExtensions.filter(function(item) {
         return newEnabledExtensions.indexOf(item) == -1;
     }).forEach(function(uuid) {
+        log('Disabling: %s'.format(uuid));
         disableExtension(uuid);
     });
 
