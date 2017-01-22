@@ -46,6 +46,14 @@ function installExtension(uuid, invocation) {
             return;
         }
 
+        // Return error if version validation is enabled and extensions do not support current Shell version
+        if (!global.settings.get_boolean(ExtensionSystem.EXTENSION_DISABLE_VERSION_CHECK_KEY)) {
+            if (!info.shell_version_map || !info.shell_version_map.hasOwnProperty(Config.PACKAGE_VERSION)) {
+                invocation.return_dbus_error('org.gnome.Shell.ShellVersionError', "Extension is not compatible with current GNOME Shell");
+                return;
+            }
+        }
+
         let dialog = new InstallExtensionDialog(uuid, info, invocation);
         dialog.open(global.get_current_time());
     });
@@ -192,6 +200,8 @@ const InstallExtensionDialog = new Lang.Class({
         this._info = info;
         this._invocation = invocation;
 
+        this.setShellVersion();
+
         this.setButtons([{ label: _("Cancel"),
                            action: Lang.bind(this, this._onCancelButtonPressed),
                            key:    Clutter.Escape
@@ -201,7 +211,12 @@ const InstallExtensionDialog = new Lang.Class({
                            default: true
                          }]);
 
-        let message = _("Download and install “%s” from extensions.gnome.org?").format(info.name);
+        let message;
+        if (this._shell_version != Config.PACKAGE_VERSION) {
+            message = _("Extension “%s” does not list your version of GNOME Shell as supported.\nDownload and install it from extensions.gnome.org anyway?").format(info.name);
+        } else {
+            message = _("Download and install “%s” from extensions.gnome.org?").format(info.name);
+        }
 
         let box = new St.BoxLayout({ style_class: 'prompt-dialog-main-layout',
                                      vertical: false });
@@ -222,7 +237,7 @@ const InstallExtensionDialog = new Lang.Class({
     },
 
     _onInstallButtonPressed: function(button, event) {
-        let params = { shell_version: Config.PACKAGE_VERSION };
+        let params = { shell_version: String(this._shell_version) };
 
         let url = REPOSITORY_URL_DOWNLOAD.format(this._uuid);
         let message = Soup.form_request_new_from_hash('GET', url, params);
@@ -260,7 +275,92 @@ const InstallExtensionDialog = new Lang.Class({
         }));
 
         this.close();
-    }
+    },
+
+    // Set this._shell_version to Shell version that should be used for download extension.
+    setShellVersion: function() {
+        // Return array with current Shell versions.
+        // For stable version: "major.minor" and "major.minor.point";
+        // For unstable version only "major.minor.point".
+        function getShellVersions() {
+            let versions = [];
+            let versionComponents = Config.PACKAGE_VERSION.split('.');
+
+            if (versionComponents.length >= 2) {
+                // Stable version
+                if (versionComponents[2] % 2 == 0) {
+                    versions.push('%s.%s'.format(versionComponents[0], versionComponents[1]));
+                }
+
+                if (versionComponents.length >= 3) {
+                    versions.push('%s.%s.%s'.format(versionComponents[0], versionComponents[1], versionComponents[2]));
+                }
+            }
+
+            return versions;
+        }
+
+        // Compare versions in format "major.minor.point"
+        // Return -1 if version a is lower than version b
+        // Return 0 if version a is equal to version b
+        // Return 1 if version b is greater than version a
+        function versionCompare(a, b) {
+            if (a == b) {
+                return 0;
+            }
+
+            a = a.split('.');
+            b = b.split('.');
+
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                if (a.length < i + 1) {
+                    return -1;
+                }
+
+                if (b.length < i + 1) {
+                    return 1;
+                }
+
+                if (a[i] < b[i]) {
+                    return -1;
+                }
+
+                if (b[i] < a[i]) {
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        // Use current Shell version if disable-extension-version-validation
+        // is disabled or info array is broken
+        if (!global.settings.get_boolean(ExtensionSystem.EXTENSION_DISABLE_VERSION_CHECK_KEY) ||
+            !this._info || !this._info.shell_version_map) {
+            this._shell_version = Config.PACKAGE_VERSION;
+            return;
+        }
+
+        let shellVersions = getShellVersions();
+        for (let version of shellVersions) {
+            if(this._info.shell_version_map.hasOwnProperty(version)) {
+                // extensions.gnome.org will strip version if necessary
+                this._shell_version = Config.PACKAGE_VERSION;
+                return;
+            }
+        }
+
+        // Determine "best" Shell version in our case
+        let supported_shell_versions = Object.keys(this._info.shell_version_map);
+        // Sort versions
+        supported_shell_versions.sort(versionCompare);
+
+        if (versionCompare(supported_shell_versions[0], Config.PACKAGE_VERSION) == 1) {
+            this._shell_version = supported_shell_versions[0];
+        } else {
+            this._shell_version = supported_shell_versions[supported_shell_versions.length - 1];
+        }
+    },
 });
 
 function init() {
