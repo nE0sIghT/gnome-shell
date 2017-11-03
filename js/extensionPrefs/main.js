@@ -55,16 +55,13 @@ var Application = new Lang.Class({
         this._skipMainWindow = false;
     },
 
-    _extensionAvailable: function(uuid) {
+    _prefsAvailable: function(uuid) {
         let extension = ExtensionUtils.extensions[uuid];
 
         if (!extension)
             return false;
 
-        if (!extension.dir.get_child('prefs.js').query_exists(null))
-            return false;
-
-        return true;
+        return extension.hasPrefs;
     },
 
     _getExtensionPrefsModule: function(extension) {
@@ -83,7 +80,7 @@ var Application = new Lang.Class({
     },
 
     _selectExtension: function(uuid) {
-        if (!this._extensionAvailable(uuid))
+        if (!this._prefsAvailable(uuid))
             return;
 
         let extension = ExtensionUtils.extensions[uuid];
@@ -223,7 +220,7 @@ var Application = new Lang.Class({
     },
 
     _extensionsLoaded: function() {
-        if (this._startupUuid && this._extensionAvailable(this._startupUuid))
+        if (this._startupUuid && this._prefsAvailable(this._startupUuid))
             this._selectExtension(this._startupUuid);
         this._startupUuid = null;
         this._skipMainWindow = false;
@@ -251,7 +248,7 @@ var Application = new Lang.Class({
             // Strip off "extension:///" prefix which fakes a URI, if it exists
             uuid = stripPrefix(uuid, "extension:///");
 
-            if (this._extensionAvailable(uuid))
+            if (this._prefsAvailable(uuid))
                 this._selectExtension(uuid);
             else if (!this._loaded)
                 this._startupUuid = uuid;
