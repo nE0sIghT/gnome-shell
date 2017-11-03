@@ -347,19 +347,19 @@ var ExtensionRow = new Lang.Class({
         let checkVersion = !this._settings.get_boolean('disable-extension-version-validation');
 
         return !this._settings.get_boolean('disable-user-extensions') &&
-               !(checkVersion && ExtensionUtils.isOutOfDate(extension));
+               !(checkVersion && ExtensionUtils.isOutOfDate(extension)) &&
+                (extension.type !== ExtensionUtils.ExtensionType.MODE);
     },
 
     _isEnabled: function() {
-        let extensions = this._settings.get_strv('enabled-extensions');
-        return extensions.indexOf(this.uuid) != -1;
+        return ExtensionUtils.extensions[this.uuid].state === ExtensionUtils.ExtensionState.ENABLED;
     },
 
     _enable: function() {
-        let extensions = this._settings.get_strv('enabled-extensions');
-        if (extensions.indexOf(this.uuid) != -1)
+        if (ExtensionUtils.extensions[this.uuid].state === ExtensionUtils.ExtensionState.ENABLED)
             return;
 
+        let extensions = this._settings.get_strv('enabled-extensions');
         extensions.push(this.uuid);
         this._settings.set_strv('enabled-extensions', extensions);
     },
