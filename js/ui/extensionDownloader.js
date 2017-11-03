@@ -13,6 +13,7 @@ const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
 const ExtensionSystem = imports.ui.extensionSystem;
 const FileUtils = imports.misc.fileUtils;
+const Main = imports.ui.main;
 const ModalDialog = imports.ui.modalDialog;
 
 const _signals = ExtensionSystem._signals;

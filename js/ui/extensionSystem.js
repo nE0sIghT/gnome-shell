@@ -317,7 +317,7 @@ function _loadExtensions() {
     finder.connect('extension-found', function(finder, extension) {
         loadExtension(extension);
     });
-    finder.scanExtensions();
+    finder.scanExtensions(Main.sessionMode.enabledExtensions);
 }
 
 function enableAllExtensions() {

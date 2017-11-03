@@ -13,7 +13,8 @@ const FileUtils = imports.misc.fileUtils;
 
 var ExtensionType = {
     SYSTEM: 1,
-    PER_USER: 2
+    PER_USER: 2,
+    MODE: 3
 };
 
 // Maps uuid -> metadata object
@@ -172,9 +173,18 @@ var ExtensionFinder = new Lang.Class({
             return;
         }
 
-        let extension;
-        let type = extensionDir.has_prefix(perUserDir) ? ExtensionType.PER_USER
-                                                       : ExtensionType.SYSTEM;
+        let extension, type;
+        if (this._modeExtensions.indexOf(uuid) > -1) {
+            if (extensionDir.has_prefix(perUserDir)) {
+                log('Found user extension %s, but not loading from %s directory as part of session mode.'.format(uuid, extensionDir.get_path()));
+                return;
+            }
+            type = ExtensionType.MODE;
+        } else if (extensionDir.has_prefix(perUserDir))
+            type = ExtensionType.PER_USER;
+        else
+            type = ExtensionType.SYSTEM;
+
         try {
             extension = createExtensionObject(uuid, extensionDir, type);
         } catch(e) {
@@ -184,7 +194,11 @@ var ExtensionFinder = new Lang.Class({
         this.emit('extension-found', extension);
     },
 
-    scanExtensions: function() {
+    scanExtensions: function(modeExtensions) {
+        if (!modeExtensions) {
+            modeExtensions = [];
+        }
+        this._modeExtensions = modeExtensions;
         let perUserDir = Gio.File.new_for_path(global.userdatadir);
         FileUtils.collectFromDatadirs('extensions', true, Lang.bind(this, this._loadExtension, perUserDir));
     }
