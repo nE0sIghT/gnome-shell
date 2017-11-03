@@ -16,6 +16,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 
 const GnomeShellIface = '<node> \
 <interface name="org.gnome.Shell.Extensions"> \
+<method name="ListExtensions"> \
+    <arg type="a{sa{sv}}" direction="out" name="extensions" /> \
+</method> \
 <signal name="ExtensionStatusChanged"> \
     <arg type="s" name="uuid"/> \
     <arg type="i" name="state"/> \
@@ -196,7 +199,7 @@ var Application = new Lang.Class({
     _scanExtensions: function() {
         let finder = new ExtensionUtils.ExtensionFinder();
         finder.connect('extension-found', Lang.bind(this, this._extensionFound));
-        finder.scanExtensions();
+        finder.scanExtensionsFromShell(this._shellProxy);
         this._extensionsLoaded();
     },
 

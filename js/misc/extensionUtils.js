@@ -194,6 +194,36 @@ var ExtensionFinder = new Lang.Class({
         this.emit('extension-found', extension);
     },
 
+    // scanExtensionsFromShell dbus API, load metadata on disk and sync state and type from Shell
+    scanExtensionsFromShell: function(shellProxy) {
+        let extensionsProx;
+        [extensionsProx] = shellProxy.ListExtensionsSync();
+        for (let uuid in extensionsProx) {
+            let extension, dir, type;
+            try {
+                dir = Gio.File.new_for_path(extensionsProx[uuid].path.unpack());
+
+                let existing = extensions[uuid];
+                if (!existing) {
+                    type = extensionsProx[uuid].type.unpack();
+                    extension = createExtensionObject(uuid, dir, type);
+                } else
+                    extension = extensions[uuid];
+
+                // sync additional live extension state from Shell
+                extension.state = extensionsProx[uuid].state.unpack();
+                extension.error = extensionsProx[uuid].error.unpack();
+
+                if (!existing)
+                    this.emit('extension-found', extension);
+            } catch (e) {
+                logError(e, 'Could not get extension %s from shell Proxy'.format(uuid));
+                continue;
+            }
+        }
+    },
+
+    // scanExtensions from disk
     scanExtensions: function(modeExtensions) {
         if (!modeExtensions) {
             modeExtensions = [];
