@@ -175,8 +175,11 @@ var Application = new Lang.Class({
 
         this._shellProxy = new GnomeShellProxy(Gio.DBus.session, 'org.gnome.Shell', '/org/gnome/Shell');
         this._shellProxy.connectSignal('ExtensionStatusChanged', Lang.bind(this, function(proxy, senderName, [uuid, state, error]) {
-            if (ExtensionUtils.extensions[uuid] !== undefined)
-                this._scanExtensions();
+            if (ExtensionUtils.extensions[uuid] !== undefined) {
+                ExtensionUtils.extensions[uuid].state = state;
+                ExtensionUtils.extensions[uuid].error = error;
+                ExtensionUtils.extensions[uuid].row.updateState();
+            }
         }));
 
         this._window.show_all();
@@ -206,7 +209,10 @@ var Application = new Lang.Class({
     _extensionFound: function(finder, extension) {
         let row = new ExtensionRow(extension.uuid);
 
-        row.prefsButton.visible = this._extensionAvailable(row.uuid);
+        // attach the row to the extension for update signals
+        extension.row = row;
+
+        row.prefsButton.visible = this._prefsAvailable(row.uuid);
         row.prefsButton.connect('clicked', Lang.bind(this,
             function() {
                 this._selectExtension(row.uuid);
@@ -278,10 +284,6 @@ var ExtensionRow = new Lang.Class({
         this.uuid = uuid;
 
         this._settings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
-        this._settings.connect('changed::enabled-extensions', Lang.bind(this,
-            function() {
-                this._switch.state = this._isEnabled();
-            }));
         this._settings.connect('changed::disable-extension-version-validation',
             Lang.bind(this, function() {
                 this._switch.sensitive = this._canEnable();
@@ -340,6 +342,10 @@ var ExtensionRow = new Lang.Class({
             }));
         this._switch.connect('state-set', function() { return true; });
         hbox.add(this._switch);
+    },
+
+    updateState: function () {
+        this._switch.state = this._isEnabled();
     },
 
     _canEnable: function() {
