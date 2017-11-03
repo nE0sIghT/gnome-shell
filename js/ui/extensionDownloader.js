@@ -29,6 +29,14 @@ function installExtension(uuid, invocation) {
     let params = { uuid: uuid,
                    shell_version: Config.PACKAGE_VERSION };
 
+    if (ExtensionUtils.extensions[uuid].type === ExtensionUtils.ExtensionType.MODE) {
+        let title = _("Can't install “%s”:").format(uuid);
+        let msg = _("This is an extension enabled by your current mode, you can't install manually any update in that session.");
+        Main.notifyError(title, msg);
+        invocation.return_dbus_error('org.gnome.Shell.CantInstallError', msg);
+        return;
+    }
+
     let message = Soup.form_request_new_from_hash('GET', REPOSITORY_URL_INFO, params);
 
     _httpSession.queue_message(message, function(session, message) {
@@ -57,7 +65,7 @@ function uninstallExtension(uuid) {
     if (!extension)
         return false;
 
-    // Don't try to uninstall system extensions
+    // Don't try to uninstall system or mode extensions
     if (extension.type != ExtensionUtils.ExtensionType.PER_USER)
         return false;
 
@@ -161,6 +169,8 @@ function updateExtension(uuid) {
 function checkForUpdates() {
     let metadatas = {};
     for (let uuid in ExtensionUtils.extensions) {
+        if (ExtensionUtils.extensions[uuid].type === ExtensionUtils.ExtensionType.MODE)
+            continue;
         metadatas[uuid] = ExtensionUtils.extensions[uuid].metadata;
     }
 
